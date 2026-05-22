@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArXiv Math Reader</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #0f0f13;
+    --bg2: #17171e;
+    --bg3: #1e1e28;
+    --border: #2e2e3e;
+    --text: #e8e6f0;
+    --text-muted: #8a87a0;
+    --text-dim: #5a576e;
+    --accent: #a78bfa;
+    --accent2: #7c3aed;
+    --author: #818cf8;
+    --link: #a78bfa;
+    --link-hover: #c4b5fd;
+    --read-bg: rgba(124, 58, 237, 0.08);
+    --read-border: rgba(124, 58, 237, 0.25);
+    --tag-bg: rgba(167, 139, 250, 0.12);
+    --tag-text: #a78bfa;
+    --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    --card-bg: #17171e;
+    --input-bg: #1e1e28;
+    --badge-read: rgba(124,58,237,0.2);
+    --badge-read-text: #c4b5fd;
+    --badge-appeared: rgba(99,102,241,0.2);
+    --badge-appeared-text: #a5b4fc;
+    --spinner: #a78bfa;
+  }
+
+  [data-theme="light"] {
+    --bg: #f4f2fa;
+    --bg2: #ffffff;
+    --bg3: #ede9f8;
+    --border: #d8d2ee;
+    --text: #1a1625;
+    --text-muted: #5c5475;
+    --text-dim: #9990bb;
+    --accent: #6d28d9;
+    --accent2: #5b21b6;
+    --author: #4338ca;
+    --link: #6d28d9;
+    --link-hover: #4c1d95;
+    --read-bg: rgba(109, 40, 217, 0.04);
+    --read-border: rgba(109, 40, 217, 0.18);
+    --tag-bg: rgba(109, 40, 217, 0.08);
+    --tag-text: #6d28d9;
+    --shadow: 0 2px 16px rgba(80,50,150,0.10);
+    --card-bg: #ffffff;
+    --input-bg: #ede9f8;
+    --badge-read: rgba(109,40,217,0.12);
+    --badge-read-text: #5b21b6;
+    --badge-appeared: rgba(79,70,229,0.12);
+    --badge-appeared-text: #3730a3;
+    --spinner: #6d28d9;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Sans 3', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    font-family: 'Lora', serif;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .logo span {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Theme toggle */
+  .theme-btn {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .theme-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* Fetch button */
+  .fetch-btn {
+    background: var(--accent2);
+    border: none;
+    color: #fff;
+    border-radius: 20px;
+    padding: 7px 18px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+    white-space: nowrap;
+  }
+  .fetch-btn:hover { background: var(--accent); transform: translateY(-1px); }
+  .fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Main layout ── */
+  .container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+  }
+
+  /* ── Keywords panel ── */
+  .keywords-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+
+  .panel-title {
+    font-family: 'Lora', serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  .keywords-input-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .kw-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.88rem;
+    font-family: 'Source Sans 3', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .kw-input:focus { border-color: var(--accent); }
+
+  .add-kw-btn {
+    background: var(--tag-bg);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .add-kw-btn:hover { background: var(--accent); color: #fff; }
+
+  .tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 32px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--tag-bg);
+    border: 1px solid rgba(167,139,250,0.25);
+    color: var(--tag-text);
+    border-radius: 20px;
+    padding: 4px 12px 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: default;
+  }
+
+  .tag-remove {
+    background: none;
+    border: none;
+    color: var(--tag-text);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+    opacity: 0.6;
+    padding: 0;
+    transition: opacity 0.15s;
+  }
+  .tag-remove:hover { opacity: 1; }
+
+  /* ── Status bar ── */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    min-height: 28px;
+  }
+
+  .status-text {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .filter-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    border-radius: 16px;
+    padding: 3px 12px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--tag-bg);
+  }
+
+  /* ── Spinner ── */
+  .spinner-wrap {
+    display: flex;
+    justify-content: center;
+    padding: 60px 0;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid var(--border);
+    border-top-color: var(--spinner);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Cards ── */
+  .papers-list { display: flex; flex-direction: column; gap: 16px; }
+
+  .paper-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    position: relative;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s, transform 0.15s, opacity 0.3s;
+    animation: fadeIn 0.35s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .paper-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .paper-card.is-read,
+  .paper-card.is-appeared {
+    background: var(--read-bg);
+    border-color: var(--read-border);
+    opacity: 0.72;
+  }
+  .paper-card.is-read:hover,
+  .paper-card.is-appeared:hover { opacity: 1; }
+
+  /* Status badge */
+  .paper-badge {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 10px;
+  }
+  .paper-badge.badge-read {
+    background: var(--badge-read);
+    color: var(--badge-read-text);
+  }
+  .paper-badge.badge-appeared {
+    background: var(--badge-appeared);
+    color: var(--badge-appeared-text);
+  }
+
+  /* Keywords matched */
+  .matched-keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .match-tag {
+    font-size: 0.68rem;
+    background: var(--tag-bg);
+    color: var(--tag-text);
+    border-radius: 10px;
+    padding: 2px 8px;
+    font-weight: 500;
+  }
+
+  /* Paper content */
+  .paper-title {
+    font-family: 'Lora', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.45;
+    margin-bottom: 8px;
+    padding-right: 60px;
+  }
+
+  .paper-authors {
+    font-size: 0.82rem;
+    color: var(--author);
+    margin-bottom: 12px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .paper-abstract {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+
+  .abstract-toggle {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+    font-family: 'Source Sans 3', sans-serif;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    display: block;
+    margin-top: -6px;
+    margin-bottom: 10px;
+  }
+
+  .paper-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .paper-link {
+    color: var(--link);
+    font-size: 0.82rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.15s;
+  }
+  .paper-link:hover { color: var(--link-hover); text-decoration: underline; }
+
+  .paper-date {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .mark-read-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    padding: 3px 10px;
+    font-size: 0.73rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Source Sans 3', sans-serif;
+  }
+  .mark-read-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Empty / error states ── */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-dim);
+  }
+  .empty-state .big { font-size: 2.5rem; margin-bottom: 12px; }
+  .empty-state p { font-size: 0.9rem; line-height: 1.6; }
+
+  .error-msg {
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.3);
+    color: #fca5a5;
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  /* ── Stats strip ── */
+  .stats-strip {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .stat {
+    font-size: 0.78rem;
+    color: var(--text-dim);
+  }
+  .stat strong { color: var(--text-muted); }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    header { padding: 10px 14px; }
+    .logo { font-size: 1.1rem; }
+    .container { padding: 16px 12px 40px; }
+    .paper-card { padding: 16px 16px; }
+    .paper-title { font-size: 0.95rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">∂ arXiv<span>math</span></div>
+  <div class="header-right">
+    <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">
+      <span id="themeIcon">☀️</span> Light
+    </button>
+    <button class="fetch-btn" id="fetchBtn" onclick="fetchPapers()">Fetch Papers</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Keywords panel -->
+  <div class="keywords-panel">
+    <div class="panel-title">Keywords — abstract search</div>
+    <div class="keywords-input-row">
+      <input class="kw-input" id="kwInput" type="text" placeholder="e.g. topological group, Riemann surface…" 
+             onkeydown="if(event.key==='Enter') addKeyword()">
+      <button class="add-kw-btn" onclick="addKeyword()">+ Add</button>
+    </div>
+    <div class="tags-container" id="tagsContainer"></div>
+  </div>
+
+  <!-- Status + filters -->
+  <div class="status-bar">
+    <div class="status-text" id="statusText">Add keywords and click "Fetch Papers"</div>
+    <div class="filter-row">
+      <button class="filter-btn active" id="filterAll" onclick="setFilter('all')">All</button>
+      <button class="filter-btn" id="filterUnread" onclick="setFilter('unread')">Unread</button>
+      <button class="filter-btn" id="filterRead" onclick="setFilter('read')">Read</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-strip" id="statsStrip" style="display:none"></div>
+
+  <!-- Error -->
+  <div class="error-msg" id="errorMsg" style="display:none"></div>
+
+  <!-- Content -->
+  <div id="content"></div>
+</div>
+
+<script>
+// ──────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────
+let keywords = JSON.parse(localStorage.getItem('arxiv_keywords') || '[]');
+let seenPapers = JSON.parse(localStorage.getItem('arxiv_seen') || '{}');
+// seenPapers[id] = { status: 'appeared'|'read', firstSeen: timestamp }
+
+let allFetched = [];
+let currentFilter = 'all';
+let theme = localStorage.getItem('arxiv_theme') || 'dark';
+
+// ──────────────────────────────────────────────
+// Init
+// ──────────────────────────────────────────────
+document.documentElement.setAttribute('data-theme', theme);
+updateThemeButton();
+renderTags();
+
+// ──────────────────────────────────────────────
+// Theme
+// ──────────────────────────────────────────────
+function toggleTheme() {
+  theme = theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('arxiv_theme', theme);
+  updateThemeButton();
+}
+function updateThemeButton() {
+  const btn = document.getElementById('themeBtn');
+  const icon = document.getElementById('themeIcon');
+  if (theme === 'dark') { icon.textContent = '☀️'; btn.childNodes[1].textContent = ' Light'; }
+  else { icon.textContent = '🌙'; btn.childNodes[1].textContent = ' Dark'; }
+}
+
+// ──────────────────────────────────────────────
+// Keywords
+// ──────────────────────────────────────────────
+function addKeyword() {
+  const input = document.getElementById('kwInput');
+  const val = input.value.trim().toLowerCase();
+  if (!val || keywords.includes(val)) { input.value = ''; return; }
+  keywords.push(val);
+  saveKeywords();
+  renderTags();
+  input.value = '';
+}
+
+function removeKeyword(kw) {
+  keywords = keywords.filter(k => k !== kw);
+  saveKeywords();
+  renderTags();
+}
+
+function saveKeywords() {
+  localStorage.setItem('arxiv_keywords', JSON.stringify(keywords));
+}
+
+function renderTags() {
+  const c = document.getElementById('tagsContainer');
+  if (keywords.length === 0) {
+    c.innerHTML = '<span style="font-size:0.8rem;color:var(--text-dim);font-style:italic;">No keywords yet — add some above</span>';
+    return;
+  }
+  c.innerHTML = keywords.map(kw => `
+    <span class="tag">
+      ${escHtml(kw)}
+      <button class="tag-remove" onclick="removeKeyword(${JSON.stringify(kw)})" title="Remove">×</button>
+    </span>
+  `).join('');
+}
+
+// ──────────────────────────────────────────────
+// Fetch from arXiv
+// ──────────────────────────────────────────────
+async function fetchPapers() {
+  if (keywords.length === 0) {
+    showError('Please add at least one keyword before fetching.');
+    return;
+  }
+  hideError();
+  setStatus('Fetching from arXiv…');
+  const btn = document.getElementById('fetchBtn');
+  btn.disabled = true;
+  btn.textContent = 'Fetching…';
+  showSpinner();
+
+  try {
+    // Two weeks ago
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    // Build query: search across all math categories
+    // We'll pull a broad math set and filter locally by keywords in abstract
+    const searchQuery = 'cat:math.*';
+    const maxResults = 300; // fetch enough to filter through
+
+    const url = `https://export.arxiv.org/api/query?` +
+      `search_query=${encodeURIComponent(searchQuery)}` +
+      `&start=0&max_results=${maxResults}` +
+      `&sortBy=submittedDate&sortOrder=descending`;
+
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`arXiv API returned ${resp.status}`);
+    const xml = await resp.text();
+    const papers = parseAtom(xml, twoWeeksAgo);
+
+    // Filter by keywords in title+abstract
+    const matched = papers.filter(p => matchesKeywords(p));
+
+    // Mark as appeared for those we haven't seen before
+    const now = Date.now();
+    matched.forEach(p => {
+      if (!seenPapers[p.id]) {
+        seenPapers[p.id] = { status: 'appeared', firstSeen: now };
+      }
+    });
+    localStorage.setItem('arxiv_seen', JSON.stringify(seenPapers));
+
+    allFetched = matched;
+    renderPapers();
+    const dateStr = twoWeeksAgo.toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+    setStatus(`Showing papers from the last 14 days (since ${dateStr})`);
+    updateStats();
+
+  } catch(err) {
+    showError(`Failed to fetch papers: ${err.message}. This may be a CORS issue — try opening the file via a local server or use the browser's fetch (file:// may be blocked by some browsers).`);
+    setStatus('');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Fetch Papers';
+}
+
+function parseAtom(xmlStr, since) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlStr, 'application/xml');
+  const entries = Array.from(doc.querySelectorAll('entry'));
+  const papers = [];
+
+  for (const entry of entries) {
+    const id = entry.querySelector('id')?.textContent?.trim() || '';
+    const title = entry.querySelector('title')?.textContent?.replace(/\s+/g,' ').trim() || '';
+    const abstract = entry.querySelector('summary')?.textContent?.replace(/\s+/g,' ').trim() || '';
+    const published = entry.querySelector('published')?.textContent?.trim() || '';
+    const updated = entry.querySelector('updated')?.textContent?.trim() || '';
+
+    const pubDate = new Date(published);
+    if (pubDate < since) continue; // too old
+
+    const authors = Array.from(entry.querySelectorAll('author name'))
+      .map(n => n.textContent.trim());
+
+    // Clean arxiv ID for URL
+    const arxivId = id.replace('http://arxiv.org/abs/', '').replace('https://arxiv.org/abs/', '');
+    const link = `https://arxiv.org/abs/${arxivId}`;
+
+    papers.push({ id: arxivId, title, abstract, authors, published: pubDate, link });
+  }
+  return papers;
+}
+
+function matchesKeywords(paper) {
+  const haystack = (paper.title + ' ' + paper.abstract).toLowerCase();
+  return keywords.filter(kw => haystack.includes(kw));
+}
+
+// ──────────────────────────────────────────────
+// Render
+// ──────────────────────────────────────────────
+function renderPapers() {
+  const content = document.getElementById('content');
+  let papers = allFetched;
+
+  if (currentFilter === 'read') {
+    papers = papers.filter(p => seenPapers[p.id]?.status === 'read');
+  } else if (currentFilter === 'unread') {
+    papers = papers.filter(p => !seenPapers[p.id] || seenPapers[p.id].status === 'appeared');
+  }
+
+  if (papers.length === 0) {
+    content.innerHTML = `
+      <div class="empty-state">
+        <div class="big">🔭</div>
+        <p>No papers found${currentFilter !== 'all' ? ' for this filter' : ' matching your keywords in the last 14 days'}.</p>
+        ${allFetched.length === 0 ? '<p style="margin-top:8px">Try clicking "Fetch Papers" above.</p>' : ''}
+      </div>`;
+    return;
+  }
+
+  content.innerHTML = `<div class="papers-list">${papers.map((p,i) => renderCard(p,i)).join('')}</div>`;
+}
+
+function renderCard(paper, idx) {
+  const seen = seenPapers[paper.id];
+  const status = seen?.status || null;
+  const matched = matchesKeywords(paper);
+
+  const isRead = status === 'read';
+  const isAppeared = status === 'appeared';
+
+  const cardClass = isRead ? 'paper-card is-read' : isAppeared ? 'paper-card is-appeared' : 'paper-card';
+
+  const badge = isRead
+    ? '<span class="paper-badge badge-read">Read</span>'
+    : isAppeared
+    ? '<span class="paper-badge badge-appeared">Appeared</span>'
+    : '';
+
+  const matchTags = matched.map(kw => `<span class="match-tag">${escHtml(kw)}</span>`).join('');
+
+  const authorsStr = paper.authors.join(', ');
+  const dateStr = paper.published.toLocaleDateString('en-GB', {day:'numeric', month:'short', year:'numeric'});
+
+  // Abstract with truncation
+  const shortAbstract = paper.abstract.length > 400
+    ? paper.abstract.slice(0, 400) + '…'
+    : paper.abstract;
+
+  const abstractHtml = paper.abstract.length > 400
+    ? `<div class="paper-abstract" id="abs-${idx}">${escHtml(shortAbstract)}</div>
+       <button class="abstract-toggle" onclick="toggleAbstract(${idx}, ${JSON.stringify(paper.abstract)})">Show more</button>`
+    : `<div class="paper-abstract">${escHtml(paper.abstract)}</div>`;
+
+  const markBtn = isRead
+    ? ''
+    : `<button class="mark-read-btn" onclick="markRead(${JSON.stringify(paper.id)})">Mark as read</button>`;
+
+  return `
+  <div class="${cardClass}" id="card-${idx}" style="animation-delay:${idx * 0.04}s">
+    ${badge}
+    ${matchTags ? `<div class="matched-keywords">${matchTags}</div>` : ''}
+    <div class="paper-title">${escHtml(paper.title)}</div>
+    <div class="paper-authors">${escHtml(authorsStr)}</div>
+    ${abstractHtml}
+    <div class="paper-footer">
+      <a class="paper-link" href="${escHtml(paper.link)}" target="_blank" rel="noopener">
+        arxiv.org/abs/… ↗
+      </a>
+      <div style="display:flex;gap:10px;align-items:center">
+        <span class="paper-date">${dateStr}</span>
+        ${markBtn}
+      </div>
+    </div>
+  </div>`;
+}
+
+function toggleAbstract(idx, fullText) {
+  const el = document.getElementById(`abs-${idx}`);
+  const btn = el.nextElementSibling;
+  if (btn.textContent === 'Show more') {
+    el.textContent = fullText;
+    btn.textContent = 'Show less';
+  } else {
+    el.textContent = fullText.slice(0, 400) + '…';
+    btn.textContent = 'Show more';
+  }
+}
+
+function markRead(id) {
+  if (seenPapers[id]) seenPapers[id].status = 'read';
+  else seenPapers[id] = { status: 'read', firstSeen: Date.now() };
+  localStorage.setItem('arxiv_seen', JSON.stringify(seenPapers));
+  renderPapers();
+  updateStats();
+}
+
+// ──────────────────────────────────────────────
+// Filter
+// ──────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  ['all','unread','read'].forEach(x => {
+    document.getElementById('filter'+capitalize(x)).classList.toggle('active', x === f);
+  });
+  renderPapers();
+}
+
+// ──────────────────────────────────────────────
+// UI helpers
+// ──────────────────────────────────────────────
+function showSpinner() {
+  document.getElementById('content').innerHTML = '<div class="spinner-wrap"><div class="spinner"></div></div>';
+}
+function setStatus(msg) {
+  document.getElementById('statusText').textContent = msg;
+}
+function showError(msg) {
+  const el = document.getElementById('errorMsg');
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('errorMsg').style.display = 'none';
+}
+function updateStats() {
+  const strip = document.getElementById('statsStrip');
+  if (allFetched.length === 0) { strip.style.display = 'none'; return; }
+  strip.style.display = 'flex';
+  const total = allFetched.length;
+  const readCount = allFetched.filter(p => seenPapers[p.id]?.status === 'read').length;
+  const newCount = allFetched.filter(p => seenPapers[p.id]?.status === 'appeared').length;
+  strip.innerHTML = `
+    <span class="stat"><strong>${total}</strong> papers matched</span>
+    <span class="stat"><strong>${newCount}</strong> new</span>
+    <span class="stat"><strong>${readCount}</strong> read</span>
+  `;
+}
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function capitalize(s) { return s[0].toUpperCase() + s.slice(1); }
+</script>
+</body>
+</html>
