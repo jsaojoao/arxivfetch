@@ -624,18 +624,22 @@ async function fetchPapers() {
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
 
     // Build query: search across all math categories
-    // We'll pull a broad math set and filter locally by keywords in abstract
+    // Use a CORS proxy to get around arXiv's export API restrictions
     const searchQuery = 'cat:math.*';
-    const maxResults = 300; // fetch enough to filter through
+    const maxResults = 300;
 
-    const url = `https://export.arxiv.org/api/query?` +
+    const arxivUrl = `https://export.arxiv.org/api/query?` +
       `search_query=${encodeURIComponent(searchQuery)}` +
       `&start=0&max_results=${maxResults}` +
       `&sortBy=submittedDate&sortOrder=descending`;
 
+    // Use allorigins as a CORS proxy
+    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(arxivUrl)}`;
+
     const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`arXiv API returned ${resp.status}`);
-    const xml = await resp.text();
+    if (!resp.ok) throw new Error(`Proxy returned ${resp.status}`);
+    const json = await resp.json();
+    const xml = json.contents;
     const papers = parseAtom(xml, twoWeeksAgo);
 
     // Filter by keywords in title+abstract
@@ -657,7 +661,7 @@ async function fetchPapers() {
     updateStats();
 
   } catch(err) {
-    showError(`Failed to fetch papers: ${err.message}. This may be a CORS issue — try opening the file via a local server or use the browser's fetch (file:// may be blocked by some browsers).`);
+    showError(`Failed to fetch papers: ${err.message}. The CORS proxy (allorigins.win) may be temporarily down — try again in a moment.`);
     setStatus('');
   }
 
