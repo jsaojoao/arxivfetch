@@ -579,8 +579,8 @@ function addKeyword() {
   input.value = '';
 }
 
-function removeKeyword(kw) {
-  keywords = keywords.filter(k => k !== kw);
+function removeKeyword(index) {
+  keywords.splice(parseInt(index), 1);
   saveKeywords();
   renderTags();
 }
@@ -595,10 +595,10 @@ function renderTags() {
     c.innerHTML = '<span style="font-size:0.8rem;color:var(--text-dim);font-style:italic;">No keywords yet — add some above</span>';
     return;
   }
-  c.innerHTML = keywords.map(kw => `
+  c.innerHTML = keywords.map((kw, i) => `
     <span class="tag">
       ${escHtml(kw)}
-      <button class="tag-remove" onclick="removeKeyword(${JSON.stringify(kw)})" title="Remove">×</button>
+      <button class="tag-remove" data-index="${i}" onclick="removeKeyword(this.dataset.index)" title="Remove">×</button>
     </span>
   `).join('');
 }
@@ -633,13 +633,15 @@ async function fetchPapers() {
       `&start=0&max_results=${maxResults}` +
       `&sortBy=submittedDate&sortOrder=descending`;
 
-    // Use allorigins as a CORS proxy
-    const url = `https://api.allorigins.win/get?url=${encodeURIComponent(arxivUrl)}`;
+    // Use corsproxy.io as a CORS proxy
+    const url = `https://corsproxy.io/?${encodeURIComponent(arxivUrl)}`;
 
-    const resp = await fetch(url);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
     if (!resp.ok) throw new Error(`Proxy returned ${resp.status}`);
-    const json = await resp.json();
-    const xml = json.contents;
+    const xml = await resp.text();
     const papers = parseAtom(xml, twoWeeksAgo);
 
     // Filter by keywords in title+abstract
@@ -661,7 +663,7 @@ async function fetchPapers() {
     updateStats();
 
   } catch(err) {
-    showError(`Failed to fetch papers: ${err.message}. The CORS proxy (allorigins.win) may be temporarily down — try again in a moment.`);
+    showError(`Failed to fetch papers: ${err.message}. Try clicking "Fetch Papers" again — the proxy may have timed out.`);
     setStatus('');
   }
 
@@ -850,3 +852,4 @@ function capitalize(s) { return s[0].toUpperCase() + s.slice(1); }
 </script>
 </body>
 </html>
+
